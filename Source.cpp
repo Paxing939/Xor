@@ -26,9 +26,9 @@ int main() {
 		return 0;
 	}
 
-	// get number of inputs, iterations, hidden neurons, outputs and activation function
+	// get number of inputs, iterations, hidden neurons, outputs and logistic function
 	std::string strTmp;
-	std::stringstream strStream;
+	std::stringstream strStream, strStreamTmp;
 	getline(fin, strTmp, ';');
 	strStream << strTmp;
 	int numHidLayers = 1, numHidNeurons, numInputs, numOutputs, numIterations, funcType;
@@ -41,28 +41,33 @@ int main() {
 
 	vector<vector<int>> learn(0, vector<int>(numInputs));
 	vector<vector<int>> learnAnsw(0, vector<int>(numOutputs));
-
 	vector<int> tmp(numInputs, 0);
 	getline(fin, strTmp, ';');
-	strStream << strTmp;
+	strStream.str(strTmp);
 	while (!strStream.eof()) {
+		strTmp.clear();
+		getline(strStream, strTmp, ',');
+		strStreamTmp.clear();
+		strStreamTmp.str(strTmp);
 		for (int j = 0; j < numInputs; ++j) {
-			strStream >> tmp[j];
+			strStreamTmp >> tmp[j];
 		}
 		learn.push_back(tmp);
 	}
-	strStream.clear();
-
 	tmp.resize(numOutputs);
 	getline(fin, strTmp, ';');
-	strStream << strTmp;
+	strStream.clear();
+	strStream.str(strTmp);
 	while (!strStream.eof()) {
+		strTmp.clear();
+		getline(strStream, strTmp, ',');
+		strStreamTmp.clear();
+		strStreamTmp.str(strTmp);
 		for (int j = 0; j < numOutputs; ++j) {
-			strStream >> tmp[j];
+			strStreamTmp >> tmp[j];
 		}
 		learnAnsw.push_back(tmp);
 	}
-	strStream.clear();
 
 	// initialize weights with random values
 	vector<vector<double>> synapsesHid(numHidNeurons, vector<double>(numInputs + 1, 0));
@@ -80,14 +85,14 @@ int main() {
 
 	vector<double> outputs(numOutputs, 0), errors(numOutputs, 0), outGradietns(numOutputs, 0);
 	vector<double> hiddenGradients(numHidNeurons, 0);
-	vector<double> gErrors(numIterations, 0); // слой ошибок
+	vector<double> gErrors(numIterations, 0);
 
 	int countIter = 0;
 	double gError = 0, learnSpeed = 0.2, deltSynp = 0;
 
 	do {
 		++countIter;
-		cout << "\nPass: "<< countIter << " Error: ";
+		cout << "\nPass: " << countIter << " Error: ";
 		cout << std::fixed << std::setprecision(20) << gError;
 		gError = 0;
 
@@ -112,11 +117,11 @@ int main() {
 					hiddenGradients[i] += synapsesOut[j][i] * outGradietns[j] * DerivetedFunc(hidLayer[i], funcType);
 				}
 			}
-			
+
 			// change weights of output neurons
 			for (int i = 0; i < hidLayer.size() - 1; i++) {
 				for (int j = 0; j < inputs.size(); j++) {
-					deltSynp = learnSpeed *  hiddenGradients[i] * inputs[j];
+					deltSynp = learnSpeed * hiddenGradients[i] * inputs[j];
 					synapsesHid[i][j] += deltSynp;
 				}
 			}
@@ -140,16 +145,16 @@ int main() {
 		}
 
 		for (auto i : gErrors) {
-			gError += (i * i) / 2; // calculate global error for whole age 
+			gError += i; // calculate global error for whole age
 		}
 		cout << "\n\n";
-	} while (gError > 0.01);
+	} while (gError > 0.005);
 
 	system("pause");
 	return 0;
 }
 
-void Sum(	const vector<int>&		inputs,
+void Sum(const vector<int>&		inputs,
 	const vector<vector<double>>&	synapsesHid,
 	const vector<vector<double>>&	synapsesOut,
 	vector<double>&					hidLayer,
@@ -162,14 +167,14 @@ void Sum(	const vector<int>&		inputs,
 		for (int j = 0; j < inputs.size(); j++) {
 			hidLayer[i] += synapsesHid[i][j] * inputs[j]; // summarize
 		}
-		hidLayer[i] = TransfFunc(hidLayer[i], funcType); // pass hidden neuron through the activation function
+		hidLayer[i] = TransfFunc(hidLayer[i], funcType); // pass hidden neuron through the logistic function
 	}
 
 	for (int i = 0; i < outputs.size(); i++) {
 		for (int j = 0; j < hidLayer.size(); j++) {
 			outputs[i] += synapsesOut[i][j] * hidLayer[j]; // calculate output
 		}
-		outputs[i] = TransfFunc(outputs[i], funcType); // pass output neuron through the activation function
+		outputs[i] = TransfFunc(outputs[i], funcType); // pass output neuron through the logistic function
 	}
 }
 
@@ -181,7 +186,7 @@ double DerivetedFunc(const double& x, int funcType) {
 	switch (funcType) {
 	case SYGMOID: return x * (1 - x);
 	case HYPTAN: return (1 - x * x);
-	default: std::cerr << "Incorrect value of activation function!";
+	default: std::cerr << "Incorrect value of logistic function!";
 		exit(0);
 	}
 }
@@ -190,7 +195,7 @@ double TransfFunc(const double& x, int funcType) {
 	switch (funcType) {
 	case SYGMOID: return 1 / (1 + exp(-x));
 	case HYPTAN: return tanh(x);
-	default: std::cerr << "Incorrect value of activation function!";
+	default: std::cerr << "Incorrect value of logistic function!";
 		exit(0);
 	}
 }
