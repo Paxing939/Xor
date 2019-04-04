@@ -19,36 +19,34 @@ double DerivetedFunc(const double& x, int funcType);
 double TransfFunc(const double& x, int funcType);
 
 int main() {
+	srand(time(NULL));
 	ifstream fin("Data.txt");
 	if (!fin.is_open() || fin.eof()) {
 		cout << "File is not open or empty";
 		return 0;
 	}
 
-	int funcType;
+	// get number of inputs, iterations, hidden neurons, outputs and activation function
 	std::string strTmp;
 	std::stringstream strStream;
 	getline(fin, strTmp, ';');
 	strStream << strTmp;
-
-	srand(time(NULL));
-	int numHidLayers = 1, numHidNeurons = 4, numEnters = 2, numOutputs = 2, numAges = 4;
-	int numb_synapses_hidden = numHidNeurons * numEnters;
-	strStream >> numEnters >> numHidLayers >> numAges >> numHidNeurons >> numOutputs >> funcType;
+	int numHidLayers = 1, numHidNeurons, numInputs, numOutputs, numIterations, funcType;
+	strStream >> numInputs >> numIterations >> numHidNeurons >> numOutputs >> funcType;
 	strStream.clear();
 
-	vector<int> enters(numEnters + 1, 1);
+	vector<int> inputs(numInputs + 1, 1);
 	vector<double> hidLayer(numHidNeurons + 1, 0);
-	hidLayer[numHidNeurons] = 1;
+	hidLayer[numHidNeurons] = 1; // this neuron on hidden layer is bias
 
+	vector<vector<int>> learn(0, vector<int>(numInputs));
 	vector<vector<int>> learnAnsw(0, vector<int>(numOutputs));
-	vector<vector<int>> learn(0, vector<int>(numEnters));
 
-	vector<int> tmp(numEnters, 0);
+	vector<int> tmp(numInputs, 0);
 	getline(fin, strTmp, ';');
 	strStream << strTmp;
 	while (!strStream.eof()) {
-		for (int j = 0; j < numEnters; ++j) {
+		for (int j = 0; j < numInputs; ++j) {
 			strStream >> tmp[j];
 		}
 		learn.push_back(tmp);
@@ -66,13 +64,13 @@ int main() {
 	}
 	strStream.clear();
 
-	vector<vector<double>> synapsesHid(numHidNeurons, vector<double>(numEnters + 1, 0));
+	// initialize weights with random values
+	vector<vector<double>> synapsesHid(numHidNeurons, vector<double>(numInputs + 1, 0));
 	for (int i = 0; i < numHidNeurons; ++i) {
-		for (int j = 0; j < numEnters + 1; ++j) {
+		for (int j = 0; j < numInputs + 1; ++j) {
 			synapsesHid[i][j] = GetRandDouble();
 		}
 	}
-
 	vector<vector<double>> synapsesOut(numOutputs, vector<double>(numHidNeurons + 1, GetRandDouble()));
 	for (int i = 0; i < numOutputs; ++i) {
 		for (int j = 0; j < numHidNeurons + 1; ++j) {
@@ -82,98 +80,96 @@ int main() {
 
 	vector<double> outputs(numOutputs, 0), errors(numOutputs, 0), outGradietns(numOutputs, 0);
 	vector<double> hiddenGradients(numHidNeurons, 0);
-	vector<double> gErrors(numAges, 0); // слой ошибок
+	vector<double> gErrors(numIterations, 0); // слой ошибок
 
 	int countIter = 0;
-	double gError = 0, lernSpeed = 0.2, momentum = 0.5, deltSynp = 0;
+	double gError = 0, learnSpeed = 0.2, deltSynp = 0;
 
 	do {
 		++countIter;
-		std::cout << "\nPass: "<< countIter << " Error: ";
-		std::cout << std::fixed << std::setprecision(20) << gError;
-		gError = 0; // обнуляем
+		cout << "\nPass: "<< countIter << " Error: ";
+		cout << std::fixed << std::setprecision(20) << gError;
+		gError = 0;
 
-		for (int p = 0; p < numAges; p++) {
+		for (int p = 0; p < numIterations; p++) {
 
-			for (int i = 0; i < enters.size() - 1; i++) {
-				enters[i] = learn[p][i]; // подаём данные на входы сети
+			for (int i = 0; i < inputs.size() - 1; i++) {
+				inputs[i] = learn[p][i]; // provide data to network inputs
 			}
 
-			Sum(enters, synapsesHid, synapsesOut, hidLayer, outputs, funcType);
+			Sum(inputs, synapsesHid, synapsesOut, hidLayer, outputs, funcType); // feed foward
 
 			for (int i = 0; i < outputs.size(); ++i) {
-				errors[i] = learnAnsw[p][i] - outputs[i]; // получаем ошибку
-				outGradietns[i] = errors[i] * DerivetedFunc(outputs[i], funcType);
+				errors[i] = learnAnsw[p][i] - outputs[i]; // get error
+				outGradietns[i] = errors[i] * DerivetedFunc(outputs[i], funcType); // calculate output gradients
 			}
 			gErrors[p] = 0;
 			for (auto i : errors) {
-				gErrors[p] += (i * i) / 2;
+				gErrors[p] += (i * i) / 2; // calculate error for current iteration
 			}
-			for (int i = 0; i < hidLayer.size() - 1; i++) { // передаём ошибку на второй слой ошибок скрытых нейронов
-				for (int j = 0; j < outputs.size(); j++) {
+			for (int i = 0; i < hidLayer.size() - 1; i++) { // pass the error to the layer of hidden neuron
+				for (int j = 0; j < outputs.size(); j++) { // calculate hidden gradients
 					hiddenGradients[i] += synapsesOut[j][i] * outGradietns[j] * DerivetedFunc(hidLayer[i], funcType);
 				}
-			} // по связям к выходу
+			}
 			
-
+			// change weights of output neurons
 			for (int i = 0; i < hidLayer.size() - 1; i++) {
-				for (int j = 0; j < enters.size(); j++) {
-					//new_delt_synp = speed_lerning * hidden_layer1[i] * hidden_gradients[i] + momentum * old_delt_synp;
-					deltSynp = lernSpeed *  hiddenGradients[i] * enters[j];
+				for (int j = 0; j < inputs.size(); j++) {
+					deltSynp = learnSpeed *  hiddenGradients[i] * inputs[j];
 					synapsesHid[i][j] += deltSynp;
 				}
 			}
 			for (int i = 0; i < hidLayer.size() - 1; i++) {
-				//new_delt_synp = speed_lerning * output * gradientOut + momentum * old_delt_synp;
 				for (int j = 0; j < outputs.size(); j++) {
-					deltSynp += lernSpeed * outGradietns[j] * hidLayer[i];
+					deltSynp += learnSpeed * outGradietns[j] * hidLayer[i];
 					synapsesOut[j][i] += deltSynp;
 				}
-			}// меняем веса выходных нейронов
+			}
 
 			for (int i = 0; i < numHidNeurons; i++) {
 				hiddenGradients[i] = 0;
 			}
-			std::cout << std::endl;
-			for (int i = 0; i < numEnters; i++) {
-				std::cout << enters[i] << "  ";
+			cout << std::endl;
+			for (int i = 0; i < numInputs; i++) {
+				cout << inputs[i] << "  ";
 			}
 			for (int i = 0; i < numOutputs; i++) {
-				std::cout << outputs[i] << "  ";
+				cout << outputs[i] << "  ";
 			}
 		}
 
 		for (auto i : gErrors) {
-			gError += (i * i) / 2;
+			gError += (i * i) / 2; // calculate global error for whole age 
 		}
-		std::cout << "\n\n";
+		cout << "\n\n";
 	} while (gError > 0.01);
 
 	system("pause");
 	return 0;
 }
 
-void Sum(	const vector<int>&		enters,
+void Sum(	const vector<int>&		inputs,
 	const vector<vector<double>>&	synapsesHid,
 	const vector<vector<double>>&	synapsesOut,
 	vector<double>&					hidLayer,
 	vector<double>&					outputs,
 	const int&						funcType) {
-	// запускаем распространение сигнала
+	// start distribution of a signal
 	double output = 0;
 	for (int i = 0; i < hidLayer.size() - 1; i++) {
 		hidLayer[i] = 0;
-		for (int j = 0; j < enters.size(); j++) {
-			hidLayer[i] += synapsesHid[i][j] * enters[j]; // суммируем
+		for (int j = 0; j < inputs.size(); j++) {
+			hidLayer[i] += synapsesHid[i][j] * inputs[j]; // summarize
 		}
-		hidLayer[i] = TransfFunc(hidLayer[i], funcType); // пропускаем скрытый нейрон через функцию активации
+		hidLayer[i] = TransfFunc(hidLayer[i], funcType); // pass hidden neuron through the activation function
 	}
 
 	for (int i = 0; i < outputs.size(); i++) {
 		for (int j = 0; j < hidLayer.size(); j++) {
-			outputs[i] += synapsesOut[i][j] * hidLayer[j]; // считаем выход
+			outputs[i] += synapsesOut[i][j] * hidLayer[j]; // calculate output
 		}
-		outputs[i] = TransfFunc(outputs[i], funcType); // пропускаем output через th
+		outputs[i] = TransfFunc(outputs[i], funcType); // pass output neuron through the activation function
 	}
 }
 
@@ -185,6 +181,8 @@ double DerivetedFunc(const double& x, int funcType) {
 	switch (funcType) {
 	case SYGMOID: return x * (1 - x);
 	case HYPTAN: return (1 - x * x);
+	default: std::cerr << "Incorrect value of activation function!";
+		exit(0);
 	}
 }
 
@@ -192,5 +190,7 @@ double TransfFunc(const double& x, int funcType) {
 	switch (funcType) {
 	case SYGMOID: return 1 / (1 + exp(-x));
 	case HYPTAN: return tanh(x);
+	default: std::cerr << "Incorrect value of activation function!";
+		exit(0);
 	}
 }
