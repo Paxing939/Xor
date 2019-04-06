@@ -23,6 +23,7 @@ int main() {
 	ifstream fin("Data.txt");
 	if (!fin.is_open() || fin.eof()) {
 		cout << "File is not open or empty";
+		system("pause");
 		return 0;
 	}
 
