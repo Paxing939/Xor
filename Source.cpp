@@ -24,7 +24,7 @@ int main() {
 	if (!fin.is_open() || fin.eof()) {
 		cout << "File is not open or empty";
 		system("pause");
-		return 0;
+		return 1;
 	}
 
 	// get number of inputs, iterations, hidden neurons, outputs and logistic function
