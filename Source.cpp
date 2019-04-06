@@ -30,10 +30,15 @@ int main() {
 	// get number of inputs, iterations, hidden neurons, outputs and logistic function
 	std::string strTmp;
 	std::stringstream strStream, strStreamTmp;
-	getline(fin, strTmp, ';');
-	strStream << strTmp;
-	int numHidLayers = 1, numHidNeurons, numInputs, numOutputs, numIterations, funcType;
-	strStream >> numInputs >> numIterations >> numHidNeurons >> numOutputs >> funcType;
+	int numHidLayers = 1, numHidNeurons, numInputs, numOutputs, numIterations, funcType, intTmp[5];
+	for (int i = 0; i < 5; ++i) {
+		getline(fin, strTmp, ',');
+		strStream.str(strTmp);
+		strTmp.clear();
+		strStream >> strTmp >> intTmp[i];
+		strStream.clear();
+	}
+	numInputs = intTmp[0], numIterations = intTmp[1], numHidNeurons = intTmp[2], numOutputs = intTmp[3], funcType = intTmp[4];
 	strStream.clear();
 
 	vector<int> inputs(numInputs + 1, 1);
