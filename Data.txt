@@ -1,2 +1,2 @@
-Number_of_inputs: 2,iterations: 4,hidden_neurons: 4,outputs: 1,logistic_function(0-sygmoid;1-tanh): 1,
-0 0,1 1,0 1,1 0;0,0,1,1;
+Number_of_inputs: 2,iterations: 4,hidden_neurons: 4,outputs: 2,logistic_function(0-sygmoid;1-tanh): 0,
+0 0,1 1,0 1,1 0;0 1,0 1,1 0,1 0;

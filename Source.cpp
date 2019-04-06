@@ -99,7 +99,7 @@ int main() {
 	do {
 		++countIter;
 		cout << "\nPass: " << countIter << " Error: ";
-		cout << std::fixed << std::setprecision(20) << gError;
+		cout << std::fixed << std::setprecision(10) << gError;
 		gError = 0;
 
 		for (int p = 0; p < numIterations; p++) {
@@ -147,6 +147,10 @@ int main() {
 			}
 			for (int i = 0; i < numOutputs; i++) {
 				cout << outputs[i] << "  ";
+			}
+			cout << "   correct answer: ";
+			for (int i = 0; i < numOutputs; i++) {
+				cout << learnAnsw[p][i] << "  ";
 			}
 		}
 
