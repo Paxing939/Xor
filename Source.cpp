@@ -5,9 +5,9 @@
 #include <ctime>
 #include <iomanip>
 #include <fstream>
-
 using std::vector;
 using std::ifstream;
+using std::ofstream;
 using std::cout;
 
 enum { SYGMOID, HYPTAN };
@@ -17,10 +17,12 @@ void Sum(const vector<int>& enters, const vector<vector<double>>&	synapses_hidde
 double GetRandDouble();
 double DerivetedFunc(const double& x, int funcType);
 double TransfFunc(const double& x, int funcType);
+void SaveWeights(ofstream& fout, const vector<vector<double>>& synapsesHid, const vector<vector<double>>& synapsesOut, const int& countIter);
 
 int main() {
 	srand(time(NULL));
 	ifstream fin("Data.txt");
+	ofstream fout("Weights.txt");
 	if (!fin.is_open() || fin.eof()) {
 		cout << "File is not open or empty";
 		system("pause");
@@ -48,8 +50,10 @@ int main() {
 	vector<vector<int>> learn(0, vector<int>(numInputs));
 	vector<vector<int>> learnAnsw(0, vector<int>(numOutputs));
 	vector<int> tmp(numInputs, 0);
+	bool isFirst = true;
 	getline(fin, strTmp, ';');
 	strStream.str(strTmp);
+	strStreamTmp >> strTmp;
 	while (!strStream.eof()) {
 		strTmp.clear();
 		getline(strStream, strTmp, ',');
@@ -64,11 +68,13 @@ int main() {
 	getline(fin, strTmp, ';');
 	strStream.clear();
 	strStream.str(strTmp);
+	strStreamTmp >> strTmp;
 	while (!strStream.eof()) {
 		strTmp.clear();
 		getline(strStream, strTmp, ',');
 		strStreamTmp.clear();
 		strStreamTmp.str(strTmp);
+		if (isFirst) { strStreamTmp >> strTmp;  isFirst = false; }
 		for (int j = 0; j < numOutputs; ++j) {
 			strStreamTmp >> tmp[j];
 		}
@@ -89,15 +95,26 @@ int main() {
 		}
 	}
 
+	// output to file
+	ofstream foutFirstIter("FirstWeights.txt");
+	SaveWeights(foutFirstIter, synapsesHid, synapsesOut, 1);
+	foutFirstIter.close();
+
 	vector<double> outputs(numOutputs, 0), errors(numOutputs, 0), outGradietns(numOutputs, 0);
 	vector<double> hiddenGradients(numHidNeurons, 0);
 	vector<double> gErrors(numIterations, 0);
 
-	int countIter = 0;
+	int countIter = 0, prevIter = 0;
 	double gError = 0, learnSpeed = 0.2, deltSynp = 0;
-
+	std::string str;
 	do {
 		++countIter;
+		if (countIter - prevIter > 100) {
+			fout.open("Weights.txt", std::ios::app);
+			SaveWeights(fout, synapsesHid, synapsesOut, countIter);
+			prevIter = countIter;
+			fout.close();
+		}
 		cout << "\nPass: " << countIter << " Error: ";
 		cout << std::fixed << std::setprecision(10) << gError;
 		gError = 0;
@@ -160,11 +177,12 @@ int main() {
 		cout << "\n\n";
 	} while (gError > 0.005);
 
+	fin.close();
 	system("pause");
 	return 0;
 }
 
-void Sum(const vector<int>&		inputs,
+void Sum(const vector<int>&			inputs,
 	const vector<vector<double>>&	synapsesHid,
 	const vector<vector<double>>&	synapsesOut,
 	vector<double>&					hidLayer,
@@ -208,4 +226,25 @@ double TransfFunc(const double& x, int funcType) {
 	default: std::cerr << "Incorrect value of logistic function!";
 		exit(0);
 	}
+}
+
+void SaveWeights(ofstream& fout, const vector<vector<double>>& synapsesHid, const vector<vector<double>>& synapsesOut, const int& countIter) {
+	fout << "Iteration #" << countIter << '\n';
+	for (int i = 0; i < synapsesHid.size(); ++i) {
+		fout << "Weights of #" << i + 1 << " neuron: ";
+		for (int j = 0; j < synapsesHid[i].size(); ++j) {
+			fout << synapsesHid[i][j] << "  ";
+		}
+		fout << '\n';
+	}
+	fout << '\n';
+	for (int i = 0; i < synapsesOut.size(); ++i) {
+		fout << "Weights of #" << i + 1 << " neuron: ";
+		for (int j = 0; j < synapsesOut[i].size(); ++j) {
+			fout << synapsesOut[i][j] << "  ";
+		}
+		fout << '\n';
+	}
+	fout << '\n';
+	fout << '\n';
 }
